@@ -1,0 +1,8 @@
+# Telegram Mini App Files Only
+*.env
+*.pyc
+__pycache__/
+.venv/
+playlists/
+*.json
+.git/

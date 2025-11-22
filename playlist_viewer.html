@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My Playlist</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 15px 45px 15px 20px;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .search-box::after {
+            content: "🔍";
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }
+        
+        .playlist {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .song-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+        
+        .song-item:active {
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        .song-number {
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+            opacity: 0.6;
+        }
+        
+        .song-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .song-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .song-artist {
+            font-size: 13px;
+            opacity: 0.7;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .song-duration {
+            font-size: 14px;
+            opacity: 0.6;
+            white-space: nowrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            opacity: 0.7;
+        }
+        
+        .empty-state .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+        
+        .loading::after {
+            content: "...";
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><span>🎵</span> My Playlist</h1>
+            <p id="username">@username</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="total-songs">0</div>
+                <div class="label">Total Lagu</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="total-duration">0:00</div>
+                <div class="label">Total Durasi</div>
+            </div>
+        </div>
+        
+        <div class="search-box">
+            <input type="text" id="search" placeholder="Cari lagu atau artis...">
+        </div>
+        
+        <div class="playlist" id="playlist">
+            <div class="loading">Loading playlist</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+        
+        // Set theme colors
+        document.body.style.background = tg.themeParams.bg_color || document.body.style.background;
+        
+        let allSongs = [];
+        let filteredSongs = [];
+        
+        // Get username from Telegram
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('username').textContent = '@' + (user.username || user.first_name);
+            loadPlaylist(user.username || 'user' + user.id);
+        } else {
+            // Fallback for testing
+            document.getElementById('username').textContent = '@testing';
+            showEmptyState();
+        }
+        
+        async function loadPlaylist(username) {
+            try {
+                // Try to load from bot's playlist file
+                const response = await fetch(`/playlists/${username}.json`);
+                
+                if (response.ok) {
+                    allSongs = await response.json();
+                    filteredSongs = [...allSongs];
+                    displayPlaylist();
+                    updateStats();
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading playlist:', error);
+                showEmptyState();
+            }
+        }
+        
+        function displayPlaylist() {
+            const playlistEl = document.getElementById('playlist');
+            
+            if (filteredSongs.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            playlistEl.innerHTML = filteredSongs.map((song, index) => `
+                <div class="song-item" onclick="playSong('${song.url}')">
+                    <div class="song-number">${index + 1}</div>
+                    <div class="song-info">
+                        <div class="song-title">${escapeHtml(song.title)}</div>
+                        <div class="song-artist">👤 ${escapeHtml(song.channel || 'Unknown')}</div>
+                    </div>
+                    <div class="song-duration">⏱ ${song.duration || '?:??'}</div>
+                </div>
+            `).join('');
+        }
+        
+        function showEmptyState() {
+            document.getElementById('playlist').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <p>Playlist masih kosong<br>Simpan lagu dengan tombol ❤️</p>
+                </div>
+            `;
+        }
+        
+        function updateStats() {
+            document.getElementById('total-songs').textContent = allSongs.length;
+            
+            // Calculate total duration
+            let totalSeconds = 0;
+            allSongs.forEach(song => {
+                if (song.duration) {
+                    const parts = song.duration.split(':');
+                    totalSeconds += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                }
+            });
+            
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            
+            if (hours > 0) {
+                document.getElementById('total-duration').textContent = `${hours}h ${minutes}m`;
+            } else {
+                document.getElementById('total-duration').textContent = `${minutes}m`;
+            }
+        }
+        
+        // Search functionality
+        document.getElementById('search').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            
+            if (query === '') {
+                filteredSongs = [...allSongs];
+            } else {
+                filteredSongs = allSongs.filter(song => 
+                    song.title.toLowerCase().includes(query) ||
+                    (song.channel && song.channel.toLowerCase().includes(query))
+                );
+            }
+            
+            displayPlaylist();
+        });
+        
+        function playSong(url) {
+            tg.openLink(url);
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>
